@@ -9,7 +9,7 @@ COCO_PATH = cfg.COCO_PATH
 PSEUDO_YOLO_PATH = cfg.PSEUDO_YOLO_PATH
 
 
-def build_class_dictionary(COCO_PATH):
+def build_class_dictionary(json_path, dict_name):
     """
     1. Load the full JSON file into memory
 
@@ -37,7 +37,7 @@ def build_class_dictionary(COCO_PATH):
 
     letter_dictionary = {}
 
-    with open(COCO_PATH, "r") as file:
+    with open(json_path, "r") as file:
         data = json.load(file)
 
         for category_key in data["categories"]:
@@ -47,21 +47,20 @@ def build_class_dictionary(COCO_PATH):
         # print(len(class_ids), len(letter_strings))
 
         for var in range(len(class_ids)):
+            # Reversing placement of key and value creates the type easily associated with YOLO-yaml file
             letter_dictionary[letter_strings[var]] = class_ids[var]
-
-        print(letter_dictionary.items())
 
     # Now, write letter_dictionary as txt to C:\Users\addod\scribal-glyph-character-spotting\txts
 
-    with open(f"{TXTS_PATH}/letter_dictionary.txt", "w") as f:
+    with open(f"{TXTS_PATH}/{dict_name}.txt", "w") as f:
         # passing an indent parameter makes the json pretty-printed
         json.dump(letter_dictionary, f, indent=2)
 
-    # This loads your dict
+    # This loads the dict
     with open(f"{TXTS_PATH}/letter_dictionary.txt", "r") as f:
-        my_loaded_dict = json.load(f)
+        letter_dict = json.load(f)
 
-    print(my_loaded_dict)
+    print(letter_dict)
 
 
 def parse_pseudo_yolo_labels(label_path, class_dict):
@@ -105,4 +104,4 @@ letter_dictionary_file = f"{TXTS_PATH}/letter_dictionary.txt"
 # parse_pseudo_yolo_labels(PSEUDO_YOLO_PATH, letter_dictionary_file)
 
 
-# build_class_dictionary(COCO_PATH)
+# build_class_dictionary(COCO_PATH, "letter_dict_yaml")
