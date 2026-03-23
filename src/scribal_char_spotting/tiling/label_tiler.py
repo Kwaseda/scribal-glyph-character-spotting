@@ -9,21 +9,18 @@ import scribal_char_spotting.config as cfg
 
 def filter_labels_for_tile(label_list, tile_coords, tile_size, stride, image):
     """
-    Determine which character labels belong to a specific tile based on label center coordinates.
-    For tiles at the edges of the image, the tile extends to the full tile_size to cover the
-    remaining image space beyond the stride interval.
+    Filter character labels to include only those whose centers fall within the tile.
+    Edge tiles extend to tile_size to cover remaining image space.
 
     Args:
-        label_list (list): All character labels for the page as [class_id, x0, y0, w, h]
-            where x0, y0 are corner coordinates in pixels and w, h are width and height.
-        tile_coords (tuple): (x, y) coordinates for the top-left corner of the tile in pixels.
-        tile_size (int): Size of the tile in pixels (square tiles assumed), e.g. 512.
-        stride (int): Step size in pixels between consecutive tile positions.
-        image (ndarray): The image array from which tile dimensions are derived.
+        label_list: list of [class_id, x0, y0, w, h] for all page characters
+        tile_coords: (x, y) top-left corner of the tile in pixels
+        tile_size: pixel size of the tile (square), eg. 512
+        stride: step size between consecutive tiles in pixels
+        image: image array to derive tile dimensions
 
     Returns:
-        valid_labels (list): List of labels whose centers fall within the tile boundaries.
-
+        List of labels with centers within the tile boundaries
     """
     image_height, image_width = image.shape[:2]
     x_min, y_min = tile_coords

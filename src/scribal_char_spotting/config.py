@@ -14,8 +14,6 @@ import os
 
 # ── ROOT ────────────────────────────────────────────────────────────────────
 SOURCE_PATH = "C:/Users/addod/scribal-glyph-character-spotting"
-# NOTE: Always use forward slashes on Windows inside Python strings.
-# os.path.join() will handle the rest correctly on any OS.
 
 # ── INPUT DATA ──────────────────────────────────────────────────────────────
 DATA_PATH = os.path.join(SOURCE_PATH, "data", "training-25plus")
@@ -31,19 +29,30 @@ TEST_SPLIT = os.path.join(SPLITS_PATH, "test.uttlist")
 
 # ── OUTPUT ───────────────────────────────────────────────────────────────────
 TILE_STORAGE_PATH = os.path.join(SOURCE_PATH, "data", "tiled_images")
+TILE_LABEL_PATH = os.path.join(SOURCE_PATH, "data", "tiled_labels")
 
 DATASET_PATH = os.path.join(SOURCE_PATH, "data", "dataset")
-TRAIN_PATH = os.path.join(DATASET_PATH, "train")
-VAL_PATH = os.path.join(DATASET_PATH, "eval")
-TEST_PATH = os.path.join(DATASET_PATH, "test")
+DATASET_IMAGES_PATH = os.path.join(DATASET_PATH, "images")
+DATASET_LABELS_PATH = os.path.join(DATASET_PATH, "labels")
+
+TRAIN_IMAGES_PATH = os.path.join(DATASET_IMAGES_PATH, "train")
+VAL_IMAGES_PATH = os.path.join(DATASET_IMAGES_PATH, "val")
+TEST_IMAGES_PATH = os.path.join(DATASET_IMAGES_PATH, "test")
+
+TRAIN_LABELS_PATH = os.path.join(DATASET_LABELS_PATH, "train")
+VAL_LABELS_PATH = os.path.join(DATASET_LABELS_PATH, "val")
+TEST_LABELS_PATH = os.path.join(DATASET_LABELS_PATH, "test")
 
 TXTS_PATH = os.path.join(SOURCE_PATH, "txts")
-YOLO_YAML_PATH = os.path.join(SOURCE_PATH, "configs", "scribal.yaml")
+YOLO_PATH = os.path.join(SOURCE_PATH, "YOLO_training")
+YOLO_YAML_PATH = os.path.join(SOURCE_PATH, "configs", "scribal-glyph-charspotting.yaml")
+YOLO_SAVE_PATH = os.path.join(YOLO_PATH, "saved_models")
+
 
 # ── TILING PARAMETERS ────────────────────────────────────────────────────────
 TILE_SIZE = 512
-OVERLAP = 128  # 25% of TILE_SIZE  →  stride = TILE_SIZE - OVERLAP = 384
-STRIDE = TILE_SIZE - OVERLAP  # 384 — derived, never set this independently
+OVERLAP = 128  # 25% of TILE_SIZE
+STRIDE = TILE_SIZE - OVERLAP  # 384
 
 # ── YOLO TRAINING PARAMETERS ─────────────────────────────────────────────────
 CONFIDENCE_THRESHOLD = 0.25  # minimum detection confidence during inference
@@ -60,6 +69,7 @@ if __name__ == "__main__":
         "SPLITS_PATH": SPLITS_PATH,
         "TXTS_PATH": TXTS_PATH,
         "YOLO_YAML_PATH": YOLO_YAML_PATH,
+        "YOLO_SAVE_PATH": YOLO_SAVE_PATH,
     }
     for name, path in paths_to_check.items():
         status = "OK" if os.path.exists(path) else "NOT FOUND"

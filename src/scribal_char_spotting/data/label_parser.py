@@ -70,15 +70,12 @@ def parse_pseudo_yolo_labels(label_path, class_dict):
     Parses and stores the pseudo YOLO Label data as an array
     """
 
-    character_array = []
     all_character_array = []
 
     # Load the letter dictionary for assigning each letter as its officially assigned class_id
     with open(class_dict, "r") as file:
         class_dict = json.load(file)
 
-    # TODO: REMEMBER TO ALTER THIS FILE DIRECTORY SO THAT IT TAKES ALL THE FILES UNDER THE PSEUDO_YOLO_PATH (entire folder)
-    # with open(f"{label_path}/WdB_004-0017.txt", "r") as annotation_file:
     with open(label_path, "r") as annotation_file:
         characters = annotation_file.readlines()
     for character in characters:

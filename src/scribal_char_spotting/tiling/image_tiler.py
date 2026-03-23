@@ -1,5 +1,3 @@
-# Functions: pad_image(), get_tile_coords(), tile_image(), save_tiles()
-
 import numpy as np
 import os, cv2
 
@@ -8,7 +6,7 @@ from PIL import Image
 
 import scribal_char_spotting.config as cfg
 
-img_sample_path = f"{cfg.IMAGE_PATH}/WdB_027-0002.jpg"
+# img_sample_path = f"{cfg.IMAGE_PATH}/WdB_027-0002.jpg"
 
 
 def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.ndarray:
@@ -62,18 +60,11 @@ def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.nd
     return padded_image
 
 
-img_file = np.asarray(Image.open(img_sample_path))
-
+# img_file = np.asarray(Image.open(img_sample_path))
 # unpadded = Image.fromarray(img_file).show()
 
 # padded = pad_image(img_file, 3070, 3000)
-
 # padded_img = Image.fromarray(padded).show()
-
-
-# TODO: TEST THE PADDING WITH ACTUAL IMAGE IN UNTILED IMAGES FOLDER
-# Review the Notion lesson on Image tiling first Option B to decide
-# the right value for target_width
 
 
 def get_tile_coords(img_in, tile_sz, overlap):
@@ -104,7 +95,7 @@ def get_tile_coords(img_in, tile_sz, overlap):
 
 # If possible, never use unpadded tile coordinates in the actual final run
 # tile_coord_list = get_tile_coords(img_file, cfg.TILE_SIZE, cfg.OVERLAP)
-print(" ")
+
 # padded_tile_coord_list = get_tile_coords(padded, cfg.TILE_SIZE, cfg.OVERLAP)
 
 
@@ -112,9 +103,7 @@ def tile_image(padded_page_image, tile_size, overlap):
     """
     Tiling an image into smaller parts with overlapping regions for object detection.
     """
-    # TODO: Fix the bottom-strip problem present where the last row where
-    # one or multiple full 512px tile that would extend past the image edge
-    # is never created in y and x loop.
+
     tile_images = []
 
     height, width = padded_page_image.shape[:2]
@@ -152,4 +141,4 @@ def save_tiles(tiles, image_number, output_dir):
         print(f"Saved: {tile_filename}")
 
 
-# save_tiles(tiled_images, cfg.TILE_STORAGE_PATH)
+# save_tiles(tiled_images, image_number, cfg.TILE_STORAGE_PATH)

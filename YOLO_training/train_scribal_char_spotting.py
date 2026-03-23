@@ -1,8 +1,8 @@
 from ultralytics import YOLO
 import scribal_char_spotting.config as cfg
 
-epochs = 400
-imgsz = cfg.TILE_SIZE
+epochs = 100
+imgsz = 512
 
 # Load a COCO-pretrained YOLOv8m model
 model = YOLO("yolov8m.pt")
@@ -11,7 +11,9 @@ model = YOLO("yolov8m.pt")
 model.info()
 
 # Train the model for specified n0. of epochs
-results = model.train(data=cfg.YOLO_YAML_PATH, epochs=epochs, imgsz=imgsz)
+results = model.train(
+    data="configs/scribal-glyph-charspotting.yaml", epochs=epochs, imgsz=imgsz
+)
 
 # Save the trained model
-model.save(cfg.YOLO_SAVE_PATH)
+model.save("/YOLO_training/saved_models/exp_train_7138h.pt")

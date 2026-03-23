@@ -1,4 +1,4 @@
-# Master script: calls everything in sequence
+# Master script: calls everything in sequence (run_pipeline.py)
 
 """This package contains your two data modules. A good use of this init is to surface the two functions you will call most often from outside, so your pipeline script has clean imports.
 # data/__init__.py
@@ -12,7 +12,6 @@ instead of specifying which file each lives in.
 import os, cv2, json
 from PIL import Image
 import numpy as np
-from sympy import simplify
 
 
 import scribal_char_spotting.config as cfg
@@ -144,7 +143,7 @@ for file_number, filename in enumerate(all_images):
     first_tile = tiled_images[0].shape
     print(f"Tile dimensions: {first_tile}")
 
-"""     # SAVE TILED IMAGES TO TILE_STORAGE_PATH
+    # SAVE TILED IMAGES TO TILE_STORAGE_PATH
 
     save_tiles(tiled_images, image_number, cfg.TILE_STORAGE_PATH)
 
@@ -210,10 +209,10 @@ for file_number, filename in enumerate(all_images):
                 f.write(label_string)
 
         print(f"Wrote {len(normalized_tile_labels)} label files to {TILE_LABEL_DIR}")
- """
+
 
 """ Removing empty tiles"""
-# remove_empty_tiles(cfg.TILE_LABEL_PATH, cfg.TILE_STORAGE_PATH)
+remove_empty_tiles(cfg.TILE_LABEL_PATH, cfg.TILE_STORAGE_PATH)
 
 
 # Split files into datasets
@@ -222,7 +221,4 @@ make_splits(cfg.TILE_LABEL_PATH, cfg.TILE_STORAGE_PATH)
 
 # Create YOLO txt files
 
-generate_split_txts(cfg.TXTS_PATH)
-
-
-# Create scribal-charSpotting YAML with YOLO txt files +
+generate_split_txts(cfg.TILE_LABEL_PATH)
