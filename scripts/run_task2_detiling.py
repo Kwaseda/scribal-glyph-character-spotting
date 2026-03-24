@@ -1,9 +1,8 @@
 """
-
-run_detiling.py
-Master script for un-tiling YOLO inference results back to page-level detections.
+run_task2_detiling.py
+Master script for un-tiling YOLO inference results for the original unedited
+train and test images back to page-level detections.
 Mirrors the structure of run_pipeline.py.
-
 """
 
 import os

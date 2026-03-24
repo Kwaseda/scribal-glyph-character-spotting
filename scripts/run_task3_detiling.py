@@ -1,11 +1,3 @@
-"""
-
-run_detiling.py
-Master script for un-tiling YOLO inference results back to page-level detections.
-Mirrors the structure of run_pipeline.py.
-
-"""
-
 import os
 import scribal_char_spotting.config as cfg
 from scribal_char_spotting.tiling import untile_predictions

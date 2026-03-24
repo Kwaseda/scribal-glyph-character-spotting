@@ -1,4 +1,3 @@
-# visualizer.py       ← draw_boxes_on_tile() for verification only
 import cv2, os, random, json
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -7,9 +6,9 @@ import numpy as np
 import scribal_char_spotting.config as cfg
 
 """
-Pick 5-10 random tiles, run this, look at the output images
-If boxes align with actual characters → pipeline is correct
-If boxes are offset or wrong size → there is a coordinate bug to find
+Pick 5 random tiles, run this, and look at the output images
+If boxes align with actual characters, then pipeline is correct
+If boxes are offset or the wrong size, there is a coordinate bug to find
 """
 
 with open(cfg.TXTS_PATH + "/letter_dictionary.txt", "r") as f:
@@ -55,38 +54,43 @@ def draw_boxes_on_tile(tile_image, tile_annotation_file, letter_dictionary=None)
         y1 = int(yc_px + h_px / 2)
 
         # Draw rectangle on image: cv2.rectangle(image, top-left, bottom-right, color, thickness)
-        cv2.rectangle(image, (x0 - 5, y0 - 5), (x1 + 5, y1 + 5), (255, 255, 255), 5)
+        cv2.rectangle(
+            image,
+            (x0 - 5, y0 - 5),
+            (x1 + 5, y1 + 5),
+            (random.random(), 255, 0),
+            2,
+        )
 
-        # Optionally look up the class letter and put text on the image
+        # Look up the class letter and put text on the image
         if letter_dictionary is not None:
 
-            letter_dict = reverse_dict.get(
-                class_id, str(class_id)
-            )  # .get(int(class_id), str(class_id))
+            letter_dict = reverse_dict.get(class_id, str(class_id))
             print(letter_dict)
             cv2.putText(
                 image,
-                str(letter_dict),  # FIX THIS PART
+                str(letter_dict),
                 (x0, y0 - 5),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (255, 255, 0),
-                1,
+                (0, 0, 255),
+                2,
             )
 
-    # Display or save — cv2.imshow or cv2.imwrite
+    # Display the boxes on top of the tiles
     cv2.imshow("Tile Verification", image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
-with open(cfg.TXTS_PATH + "/letter_dictionary.txt", "r") as f:
+# Code for printing the boxes on individual tiles
+""" with open(cfg.TXTS_PATH + "/letter_dictionary.txt", "r") as f:
     letter_dict = json.load(f)
 
 all_tile_images = sorted(
     [f for f in os.listdir(cfg.TILE_STORAGE_PATH) if f.endswith(".jpg")]
 )
-""" sample_tiles = random.sample(all_tile_images, 5)
+sample_tiles = random.sample(all_tile_images, 5)
 
 for tile_filename in sample_tiles:
     tile_image_path = os.path.join(cfg.TILE_STORAGE_PATH, tile_filename)
@@ -99,16 +103,17 @@ for tile_filename in sample_tiles:
         continue
 
     print(f"Showing: {tile_filename}")
-    draw_boxes_on_tile(tile_image_path, tile_label_path, letter_dict)
-
- """
+    draw_boxes_on_tile(tile_image_path, tile_label_path, letter_dict) """
 
 
 def draw_boxes_on_page(image_path, annotation_path, output_path):
-
+    """
+    Draw bounding boxes on a page image from annotation file. Save to output path.
+    Uses matplotlib for high-quality visualization suitable for full pages (like in provided sample code).
+    """
     image = Image.open(image_path)
     image = np.array(image)
-    height, width = image.shape[0], image.shape[1]
+    image_height, image_width = image.shape[0], image.shape[1]
 
     with open(annotation_path, "r") as f:
         lines = f.readlines()
@@ -129,10 +134,11 @@ def draw_boxes_on_page(image_path, annotation_path, output_path):
         w_norm = float(parts[3])
         h_norm = float(parts[4])
 
-        box_x = (xc_norm - w_norm / 2) * width
-        box_y = (yc_norm - h_norm / 2) * height
-        box_w = w_norm * width
-        box_h = h_norm * height
+        # Denormalize the bounding box coordinates from normalized to pixels
+        box_x = (xc_norm - w_norm / 2) * image_width
+        box_y = (yc_norm - h_norm / 2) * image_height
+        box_w = w_norm * image_width
+        box_h = h_norm * image_height
 
         rect = patches.Rectangle(
             (box_x, box_y),

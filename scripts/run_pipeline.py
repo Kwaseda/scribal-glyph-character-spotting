@@ -1,12 +1,23 @@
-# Master script: calls everything in sequence (run_pipeline.py)
+# Master script: calls everything in the page tiling sequence (run_pipeline.py)
+"""
+Script to convert page-level images and pseudo-YOLO labels into
+tiled images and normalized tile-level YOLO annotations.
 
-"""This package contains your two data modules. A good use of this init is to surface the two functions you will call most often from outside, so your pipeline script has clean imports.
-# data/__init__.py
-from .label_parser import build_class_dictionary, parse_pseudo_yolo_labels
-from .dataset_splitter import make_splits
-Now in your pipeline script you can write:
-from scribal_spotting.data import build_class_dictionary, make_splits
-instead of specifying which file each lives in.
+Process:
+    1. Load or build class dictionary from the COCO JSON
+    2. For each image-label pair:
+       - Pad image to tile-compatible dimensions
+       - Generate tile coordinates with stride/overlap
+       - Extract and save tile images
+       - Parse pseudo-YOLO labels
+       - Filter labels for each tile
+       - Normalize coordinates to tile-local YOLO format
+       - Save tile annotations
+    3. Remove empty tiles
+    4. Split dataset into train/val/test
+    5. Generate YOLO format split .txt files
+Returns:
+    Tiled images and normalized YOLO annotations in output directories
 """
 
 import os, cv2, json
@@ -35,42 +46,7 @@ TXT_PATH = cfg.TXTS_PATH
 TESTS_DIR = "C:/Users/addod/scribal-glyph-character-spotting/tests"
 letter_dictionary_file = f"{TXT_PATH}/letter_dictionary.txt"
 
-"""
-At this point, the rest of the pipeline — `pad_image()`, `get_tile_coords()`, `tile_image()`, `save_tiles()`, `valid_tags_normalization()` — is **usable as-is or with only path changes.**
 
-**The main loop pseudo-code (your adapted version of the main block in SegmentationCleaned.py):**
-```
-SET: tile_size = 512, overlap = 125
-LOAD: class_dictionary from COCO JSON
-
-FOR EACH .txt file in your pseudo-YOLO folder:
-    
-    1. Find corresponding .jpg image file (same name, different extension)
-    
-    2. Read image with cv2
-    
-    3. Compute padded width and pad image
-    
-    4. Generate tile coordinate list
-    
-    5. Extract tile images
-    
-    6. Parse annotation file:
-       annotations = format_anno_path_scribal(txt_path, class_dictionary)
-    
-    7. FOR EACH tile coordinate:
-       valid_tags = get_valid_tags_scribal(annotations, tile_coords[i], tile_size)
-       Append to valid_tag_list
-    
-    8. Normalize all tile labels:
-       new_tags = valid_tags_normalization(valid_tag_list, tile_coords, tile_size)
-       (this function is unchanged)
-    
-    9. Save tile images to output folder
-    
-    10. Save tile annotation .txt files to output folder
-        (one file per tile, empty or not — you'll clean empty ones later)
-"""
 try:
     with open(letter_dictionary_file, "r") as file:
         letter_dict = json.load(file)
@@ -162,7 +138,7 @@ for file_number, filename in enumerate(all_images):
     label_path = os.path.join(cfg.PSEUDO_YOLO_PATH, label_filename)
     print(label_path)
 
-    # TODO: Fix the problem with the YOLO Labels
+    # Parse and store the YOLO Labels
     all_labels = parse_pseudo_yolo_labels(label_path, letter_dictionary_file)
 
     print(f"Number of labels:", len(all_labels))
@@ -186,8 +162,6 @@ for file_number, filename in enumerate(all_images):
         all_tile_labels.append(tile_label)
 
         print(f"All tile labels:", all_tile_labels)
-
-        # TODO: FIX THIS ISSUE WITH ONLY PRINTING OUT ONE TILE COORD
 
         print(f"Tile Coords: {tile_coord}, Tile_label: {tile_label}")
         print("x" * 50)

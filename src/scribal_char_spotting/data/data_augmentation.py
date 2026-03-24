@@ -1,12 +1,11 @@
 import numpy as np
-import os, cv2, json
-from PIL import Image
+import os, cv2
 import scribal_char_spotting.config as cfg
 
-TEST_IMAGE_PATH = os.path.join(cfg.IMAGE_PATH, "WdB_027-0002.jpg")
-TEST_LABEL_PATH = os.path.join(cfg.PSEUDO_YOLO_PATH, "WdB_027-0002.txt")
+# TEST_IMAGE_PATH = os.path.join(cfg.IMAGE_PATH, "WdB_027-0002.jpg")
+# TEST_LABEL_PATH = os.path.join(cfg.PSEUDO_YOLO_PATH, "WdB_027-0002.txt")
 
-test_image = cv2.imread(TEST_IMAGE_PATH)
+# test_image = cv2.imread(TEST_IMAGE_PATH)
 
 test_labels = []
 
@@ -76,12 +75,10 @@ def blank_tile_regions(image, labels, tile_size, mode):
             )
 
         elif mode == "blank_unlabeled":
-            # TODO: Fix this and understand the code properly
-            """
-            mask entire image with fill_color first,
-            THEN restore result[y1:y2, x1:x2] = image[y1:y2, x1:x2]
-            ← keeps only labeled regions, blanks everything else
-            """
+            # Mask entire image with fill_color first,
+            # then restore result[y1:y2, x1:x2] = image[y1:y2, x1:x2],
+            # keeping only labeled regions and blanking everything else
+
             result[y1_clamped:y2_clamped, x1_clamped:x2_clamped] = image[
                 y1_clamped:y2_clamped, x1_clamped:x2_clamped
             ]

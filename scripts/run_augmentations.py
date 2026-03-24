@@ -1,7 +1,7 @@
 """
-`run_augmentation.py` needs:
-- Train tile images from `cfg.TRAIN_IMAGES_PATH`
-- Train tile labels from `cfg.TRAIN_LABELS_PATH`
+run_augmentation.py needs:
+- Train tile images from cfg.TRAIN_IMAGES_PATH
+- Train tile labels from cfg.TRAIN_LABELS_PATH
 - Two new output image folders for task3 and task4
 """
 

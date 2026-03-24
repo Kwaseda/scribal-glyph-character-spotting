@@ -24,7 +24,8 @@ def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.nd
     right_pad = target_width - w  # For padding only on the right
     bottom_pad = target_height - h  # Padding for on the bottom
 
-    # Order of evaluation in this if matters: w, h => w or h (w,h condition can be true as well)
+    # Order of evaluation in this if matters:
+    #   w, h => w or h (w,h condition can be true as well)
     if w < target_width and h < target_height:
         padded_image = np.pad(
             image,

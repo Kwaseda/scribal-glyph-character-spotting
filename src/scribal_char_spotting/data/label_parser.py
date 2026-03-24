@@ -11,25 +11,14 @@ PSEUDO_YOLO_PATH = cfg.PSEUDO_YOLO_PATH
 
 def build_class_dictionary(json_path, dict_name):
     """
-    1. Load the full JSON file into memory
+    Builds a dictionary mapping character names to class IDs from a COCO JSON file.
 
-    2. Navigate to the "categories" key
+    Args:
+        json_path: Path to the COCO format JSON file
+        dict_name: Output dictionary file name
 
-    3. FOR EACH category entry:
-        Extract: id (integer) and name (letter string)
-
-        Note: COCO IDs start at 1, YOLO class IDs should start at 0
-        So: yolo_class_id = category["id"] - 1
-
-        Store pair: letter_string → yolo_class_id
-        Example: "a" → 5, "m" → 0, "q" → 1
-
-    4. Also save the reverse: yolo_class_id → letter_string
-       (this will be needed for your YOLO .yaml file later)
-
-    5. Save this dictionary somewhere accessible (as a variable or file)
-
-    RETURN: dictionary of letter → integer class_id
+    Returns:
+        Dictionary mapping letter strings to YOLO class IDs (0-indexed)
     """
 
     letter_strings = []

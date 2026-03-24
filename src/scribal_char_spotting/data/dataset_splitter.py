@@ -3,6 +3,16 @@ import os, shutil
 
 
 def make_splits(tile_label_path, tile_image_path):
+    """
+    Splits dataset tiles into train, test, and validation sets.
+    Organizes image and label files into separate directories based on a 60/20/20 split ratio.
+    Files are grouped by source ID to ensure related tiles stay together in the same split.
+    Args:
+        tile_label_path (str): Path to label files (.txt) for all tiles.
+        tile_image_path (str): Path to image files (.jpg) for all tiles.
+    Returns:
+        None: Copies files to train/test/validation directories as defined in config.
+    """
     train_label_path = cfg.TRAIN_LABELS_PATH
     test_label_path = cfg.TEST_LABELS_PATH
     eval_label_path = cfg.VAL_LABELS_PATH
@@ -101,31 +111,3 @@ def make_splits(tile_label_path, tile_image_path):
 
 
 # make_splits(cfg.TILE_LABEL_PATH, cfg.TILE_STORAGE_PATH)
-
-
-def remove_empty_tiles(tile_label_path, tile_image_path):
-    number_removed = 0
-    for txt_filename in os.listdir(tile_label_path):
-        if txt_filename.endswith(".txt"):
-            label_path = os.path.join(tile_label_path, txt_filename)
-            image_path = os.path.join(
-                tile_image_path, txt_filename.replace(".txt", ".jpg")
-            )
-            try:
-                with open(label_path, "r") as label_file:
-                    is_empty = len(label_file.readlines()) == 0
-
-                    if is_empty:
-                        os.remove(label_path)
-                        if os.path.exists(image_path):
-                            # Ensure the image exists before deletion
-                            os.remove(image_path)
-                            number_removed += 1
-            except FileNotFoundError:
-                print(f"Label file not found: {label_path}")
-                continue
-
-    print(f"Empty tile removal complete. Removed tiles: {number_removed}")
-
-
-# remove_empty_tiles(cfg.TILE_LABEL_PATH, cfg.TILE_STORAGE_PATH)

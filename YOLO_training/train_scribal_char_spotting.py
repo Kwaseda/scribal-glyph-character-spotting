@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import scribal_char_spotting.config as cfg
 
-epochs = 100
+epochs = 200
 imgsz = 512
 
 # Load a COCO-pretrained YOLOv8m model
@@ -16,4 +16,4 @@ results = model.train(
 )
 
 # Save the trained model
-model.save("/YOLO_training/saved_models/exp_train_7138h.pt")
+# model.save("/YOLO_training/saved_models/exp_train_7138h.pt") # Didn't work so used Google Colab. Also, training time was too long

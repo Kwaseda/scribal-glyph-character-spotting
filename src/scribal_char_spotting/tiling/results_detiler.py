@@ -1,4 +1,4 @@
-# % results_detiler.py
+# results_detiler.py
 
 import os, cv2
 import numpy as np
@@ -10,7 +10,11 @@ TILE_LABEL_DIR = cfg.TILE_LABEL_PATH
 
 
 def parse_tile_prediction_labels(results_label_path):
-
+    """
+    Parse YOLO prediction labels from a tile results file.
+    Reads bounding box predictions with class IDs, normalized
+    coordinates, and confidence scores.
+    """
     all_tile_detections = []
 
     if not os.path.exists(results_label_path):
@@ -31,7 +35,7 @@ def parse_tile_prediction_labels(results_label_path):
             else:
                 conf = 1.0
 
-            # add: class_id, xc_norm, yc_norm, w_norm, h_norm
+            # add the detected labels in format: class_id, xc_norm, yc_norm, w_norm, h_norm
             detections = [
                 int(parts[0]),
                 float(parts[1]),
@@ -46,7 +50,11 @@ def parse_tile_prediction_labels(results_label_path):
 
 
 def apply_nms_to_page_detections(page_detections, iou_threshold):
-
+    """
+    Apply Non-Maximum Suppression to remove duplicate detections across tile boundaries.
+    Uses OpenCV's NMS algorithm to filter overlapping boxes based on IoU threshold.
+    Returns list of detections that survive the NMS filtering.
+    """
     boxes = []
     confidences = []
     class_ids = []
@@ -56,6 +64,7 @@ def apply_nms_to_page_detections(page_detections, iou_threshold):
     if len(page_detections) == 0:
         return []
 
+    # Convert from center coordinates to top-left corner format for NMS
     for detection in page_detections:
 
         class_id, xc, yc, w, h, conf = (
@@ -73,6 +82,7 @@ def apply_nms_to_page_detections(page_detections, iou_threshold):
         confidences.append(conf)
         class_ids.append(class_id)
 
+    # Run OpenCV NMS and collect surviving detections
     kept_indices = cv2.dnn.NMSBoxes(
         boxes, confidences, score_threshold=0.0, nms_threshold=iou_threshold
     )
@@ -84,7 +94,12 @@ def apply_nms_to_page_detections(page_detections, iou_threshold):
 
 
 def denormalize_and_offset_predictions(tile_predictions, tile_origin, tile_size):
+    """
+    Convert normalized tile-level predictions to page-level pixel coordinates.
+    Denormalize coordinates from [0,1] range and offset by tile position on the page.
 
+    Returns detections in absolute page coordinate space.
+    """
     x_start, y_start = tile_origin
     page_level_detections = []
 
@@ -99,6 +114,7 @@ def denormalize_and_offset_predictions(tile_predictions, tile_origin, tile_size)
             detection[5],
         )
 
+        # Convert normalized coordinates to pixels and add tile offset
         xc_px = xc_norm * tile_size + x_start
         yc_px = yc_norm * tile_size + y_start
         w_px = w_norm * tile_size

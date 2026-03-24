@@ -1,10 +1,6 @@
-# filter_labels_for_tile(), normalize_tile_labels()
-
 import numpy as np
 import cv2
 import scribal_char_spotting.config as cfg
-
-# TODO: Explain filter_labels function to myself and rewrite normalize labels
 
 
 def filter_labels_for_tile(label_list, tile_coords, tile_size, stride, image):
