@@ -62,7 +62,7 @@ names:
   52: 'zz'
   53: '$'  
   
-path: '/content/drive/MyDrive/dataset'
+path: '/content/drive/MyDrive/dataset_task3'
 train: train.txt
 val: val.txt
 test: test.txt
