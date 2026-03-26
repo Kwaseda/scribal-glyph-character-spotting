@@ -5,6 +5,7 @@ from PIL import Image
 import numpy as np
 import scribal_char_spotting.config as cfg
 
+
 """
 Pick 5 random tiles, run this, and look at the output images
 If boxes align with actual characters, then pipeline is correct
