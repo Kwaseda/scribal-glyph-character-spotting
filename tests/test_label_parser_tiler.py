@@ -99,11 +99,13 @@ normalized_tile_labels = normalize_tile_labels(
     all_tile_labels, all_tile_coordinates, cfg.TILE_SIZE
 )
 
-num_images = len(sorted([f for f in os.listdir(cfg.IMAGE_PATH) if f.endswith(".jpg")]))
+image_name_list = len(
+    sorted([f for f in os.listdir(cfg.IMAGE_PATH) if f.endswith(".jpg")])
+)
 # Write as txt files
 for i, label_string in enumerate(normalized_tile_labels):
 
-    output_path = os.path.join(FINAL_LABEL_DIR, f"tile_{num_images}_{i+1}.txt")
+    output_path = os.path.join(FINAL_LABEL_DIR, f"tile_{image_name_list}_{i+1}.txt")
 
     with open(output_path, "w") as f:
         f.write(label_string)
