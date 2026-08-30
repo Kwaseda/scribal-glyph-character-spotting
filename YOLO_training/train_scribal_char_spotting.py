@@ -1,19 +1,33 @@
+"""Train YOLOv8m on the tiled dataset.
+
+Training for this project actually ran on Google Colab; the notebook beside this
+file is the record of those runs. This script is the local equivalent and needs
+a GPU to finish in reasonable time.
+
+The dataset root is read from configs/scribal-glyph-charspotting.yaml, which
+points at the Colab mount by default. Edit its `path` key before running here.
+"""
+
 from ultralytics import YOLO
+
 import scribal_char_spotting.config as cfg
 
-epochs = 200
-imgsz = 512
+EPOCHS = 200
+IMGSZ = 512
+PATIENCE = 50
 
-# Load a COCO-pretrained YOLOv8m model
-model = YOLO("yolov8m.pt")
+if __name__ == "__main__":
+    model = YOLO("yolov8m.pt")
+    model.info()
 
-# Display model information (optional)
-model.info()
-
-# Train the model for specified n0. of epochs
-results = model.train(
-    data="configs/scribal-glyph-charspotting.yaml", epochs=epochs, imgsz=imgsz
-)
-
-# Save the trained model
-# model.save("/YOLO_training/saved_models/exp_train_7138h.pt") # Didn't work so used Google Colab. Also, training time was too long
+    model.train(
+        data=cfg.YOLO_YAML_PATH,
+        epochs=EPOCHS,
+        imgsz=IMGSZ,
+        patience=PATIENCE,
+        # Glyphs are chiral: a mirrored 'b' is a 'd', so horizontal flips would
+        # teach the detector the wrong class.
+        fliplr=0.0,
+        project=cfg.YOLO_PATH,
+        name="exp_train_local",
+    )

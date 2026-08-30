@@ -6,3 +6,4 @@ from .results_detiler import (
     apply_nms_to_page_detections,
     untile_predictions,
 )
+from .detiling_pipeline import run_detiling_for_task

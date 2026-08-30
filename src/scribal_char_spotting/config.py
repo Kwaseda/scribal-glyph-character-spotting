@@ -1,21 +1,26 @@
 """
-Important Variables
+Paths, tiling parameters and dataset constants.
 
-Holds all paths, tiling parameters, and dataset constants
+The repository root is derived from this file's location, so the package works
+from any checkout. Override it with the SCRIBAL_ROOT environment variable when
+the data lives outside the repo (for example on Colab).
 
-HOW TO USE IN OTHER FILES:
-from scribal_char_spotting.config import COCO_PATH, TILE_SIZE, OVERLAP
-or to import everything:
-import scribal_char_spotting.config as cfg
-to use variable like TILE_SIZE, after import as cfg, use cfg.TILE_SIZE.
+Usage:
+    from scribal_char_spotting.config import COCO_PATH, TILE_SIZE, OVERLAP
+    import scribal_char_spotting.config as cfg   # then cfg.TILE_SIZE
 """
 
 import os
 
 #  ROOT
-SOURCE_PATH = "C:/Users/addod/scribal-glyph-character-spotting"
+#  config.py -> scribal_char_spotting -> src -> repository root
+_DEFAULT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+SOURCE_PATH = os.environ.get("SCRIBAL_ROOT", _DEFAULT_ROOT)
 
 #  INPUT DATA
+#  Not tracked in git: download the training-25plus set from the FAU competition.
 DATA_PATH = os.path.join(SOURCE_PATH, "data", "training-25plus")
 COCO_PATH = os.path.join(DATA_PATH, "coco.json")
 PSEUDO_YOLO_PATH = os.path.join(DATA_PATH, "pseudo_YOLO")
@@ -39,25 +44,39 @@ VAL_LABELS_PATH = os.path.join(DATASET_LABELS_PATH, "val")
 TEST_LABELS_PATH = os.path.join(DATASET_LABELS_PATH, "test")
 
 TXTS_PATH = os.path.join(SOURCE_PATH, "txts")
+LETTER_DICTIONARY_PATH = os.path.join(TXTS_PATH, "letter_dictionary.txt")
 
 # YOLO PATHS
 YOLO_PATH = os.path.join(SOURCE_PATH, "YOLO_training")
 YOLO_YAML_PATH = os.path.join(SOURCE_PATH, "configs", "scribal-glyph-charspotting.yaml")
 YOLO_SAVE_PATH = os.path.join(YOLO_PATH, "saved_models")
 
-
 #  TILING PARAMETERS
 TILE_SIZE = 512
 OVERLAP = 128  # 25% of TILE_SIZE
 STRIDE = TILE_SIZE - OVERLAP  # 384
 
-#  YOLO TRAINING PARAMETERS
-IOU_THRESHOLD = 0.5  # IoU threshold for duplicate removal during un-tiling
+#  DE-TILING
+#  IoU threshold for removing duplicate detections across tile boundaries.
+#  Matches the iou passed to model.predict() in the training notebook.
+IOU_THRESHOLD = 0.45
+
+#  Set SCRIBAL_VERBOSE=1 to re-enable the per-tile progress printing that the
+#  pipeline modules used to emit unconditionally.
+VERBOSE = os.environ.get("SCRIBAL_VERBOSE", "") not in ("", "0", "false", "False")
+
+
+def log(*args, **kwargs):
+    """Print only when SCRIBAL_VERBOSE is set."""
+    if VERBOSE:
+        print(*args, **kwargs)
+
 
 #  SANITY CHECK
 if __name__ == "__main__":
     print("=== Path Check ===")
     paths_to_check = {
+        "SOURCE_PATH": SOURCE_PATH,
         "DATA_PATH": DATA_PATH,
         "COCO_PATH": COCO_PATH,
         "PSEUDO_YOLO_PATH": PSEUDO_YOLO_PATH,

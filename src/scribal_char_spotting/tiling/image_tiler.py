@@ -1,10 +1,8 @@
 import numpy as np
 import os, cv2
 
-# For testing image modifications
-from PIL import Image
-
 import scribal_char_spotting.config as cfg
+from scribal_char_spotting.config import log
 
 # img_sample_path = f"{cfg.IMAGE_PATH}/WdB_027-0002.jpg"
 
@@ -33,7 +31,7 @@ def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.nd
             mode="constant",
             constant_values=255,
         )
-        print("Image padded to the right and bottom")
+        log("Image padded to the right and bottom")
 
     elif w < target_width:
         padded_image = np.pad(
@@ -42,7 +40,7 @@ def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.nd
             mode="constant",
             constant_values=255,
         )
-        print("Image padded to the right")
+        log("Image padded to the right")
         return padded_image
 
     elif h < target_height:
@@ -52,10 +50,10 @@ def pad_image(image: np.ndarray, target_width: int, target_height: int) -> np.nd
             mode="constant",
             constant_values=255,
         )
-        print("Image padded to the bottom")
+        log("Image padded to the bottom")
 
     else:
-        print("No padding needed if already the right size")
+        log("No padding needed if already the right size")
         return image
 
     return padded_image
@@ -139,7 +137,7 @@ def save_tiles(tiles, image_number, output_dir):
     for i, tile in enumerate(tiles):
         tile_filename = os.path.join(output_dir, f"image_{image_number}_{i+1}.jpg")
         cv2.imwrite(tile_filename, tile)
-        print(f"Saved: {tile_filename}")
+        log(f"Saved: {tile_filename}")
 
 
 # save_tiles(tiled_images, image_number, cfg.TILE_STORAGE_PATH)
