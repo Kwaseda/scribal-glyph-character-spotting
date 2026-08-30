@@ -4,7 +4,7 @@ Character-level object detection on 15th-century printed Latin pages, built arou
 detector with a tiling and de-tiling pipeline.
 
 Data comes from the [ICDAR 2025 / FAU competition on glyph detection in 15th-century European
-printed documents](https://lme.tf.fau.de/competitions/icdar-2025-competition-on-glyph-detection-in-15th-century-european-printed-documents/),
+printed documents](https://lme.tf.fau.de/competitions/icdar-2025-competition-on-glyph-detection-in-15th-century-european-printed-documents),
 the `training-25plus` set, restricted to books {4, 6, 27, 29} and to pages set in minuscule. These
 are incunabula, early printed books, not handwritten manuscripts, so the glyph shapes repeat far
 more consistently than scribal hands would.
@@ -26,7 +26,7 @@ exists to pin.
 ## Dataset
 
 | | Pages | Tiles | Label rows |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Train | 27 | 398 | 6,562 |
 | Validation | 3 | 119 | 1,430 |
 | Test | 4 | 132 | 1,615 |
@@ -48,7 +48,7 @@ recoverable. The result is lopsided, and it is the most important thing to know 
 metrics:
 
 | Book | Pages | Train | Val | Test |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | WdB_004 | 10 | 4 | 3 | 3 |
 | WdB_006 | 10 | 10 | 0 | 0 |
 | WdB_027 | 10 | 10 | 0 | 0 |
@@ -76,7 +76,7 @@ It allocates each book's pages proportionally, giving 20 training pages, 7 valid
 with all four books present in all three splits:
 
 | Book | Train | Val | Test |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | WdB_004 | 6 | 2 | 2 |
 | WdB_006 | 6 | 2 | 2 |
 | WdB_027 | 6 | 2 | 2 |
@@ -101,14 +101,14 @@ These are the numbers the notebook printed and the checkpoint that produced ever
 artefact in this repository.
 
 | Run | Training tiles | Precision | Recall | mAP50 | mAP50-95 |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | Task 2 | unmodified | 0.715 | 0.798 | **0.762** | **0.728** |
 | Task 3 | non-labelled regions blanked | 0.389 | 0.792 | **0.450** | **0.362** |
 
 Validation figures for the same checkpoints, for reference:
 
 | Run | Precision | Recall | mAP50 | mAP50-95 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Task 2 | 0.750 | 0.785 | 0.806 | 0.765 |
 | Task 3 | 0.350 | 0.861 | 0.516 | 0.411 |
 

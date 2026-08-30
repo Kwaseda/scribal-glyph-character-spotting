@@ -1,0 +1,10 @@
+/data/training-25plus
+.md
+project_skeleton.md
+!README.md
+/provided_files
+/pretraining_functions
+src/scribal_char_spotting/__pycache__
+src/scribal_char_spotting.egg-info
+src/scribal_char_spotting/data/__pycache__
+src/scribal_char_spotting/tiling/__pycache__
