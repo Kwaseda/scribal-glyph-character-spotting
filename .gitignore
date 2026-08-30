@@ -8,3 +8,9 @@ src/scribal_char_spotting/__pycache__
 src/scribal_char_spotting.egg-info
 src/scribal_char_spotting/data/__pycache__
 src/scribal_char_spotting/tiling/__pycache__
+
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
