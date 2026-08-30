@@ -1,83 +1,82 @@
-"""
-run_augmentation.py needs:
-- Train tile images from cfg.TRAIN_IMAGES_PATH
-- Train tile labels from cfg.TRAIN_LABELS_PATH
-- Two new output image folders for task3 and task4
+"""Build the modified training tiles for tasks 3 and 4.
+
+Reads the training tiles and their labels and writes two variants:
+
+    task3/images  everything outside the labelled boxes blanked
+    task4/images  the labelled boxes themselves blanked
+
+Only the training split is modified. Validation and test tiles are left as they
+are, so a model trained on task 3 tiles is evaluated on unmodified pages.
+
+Run from the repository root:  python scripts/run_augmentations.py
 """
 
-import os, cv2
+import os
+
+import cv2
+
 import scribal_char_spotting.config as cfg
 from scribal_char_spotting.data import blank_tile_regions
 
-source_images_dir = cfg.TRAIN_IMAGES_PATH
-source_labels_dir = cfg.TRAIN_LABELS_PATH
-task3_img_output_dir = os.path.join(cfg.DATASET_PATH, "task3/images")
-task4_img_output_dir = os.path.join(cfg.DATASET_PATH, "task4/images")
+SOURCE_IMAGES_DIR = cfg.TRAIN_IMAGES_PATH
+SOURCE_LABELS_DIR = cfg.TRAIN_LABELS_PATH
+TASK3_IMG_OUTPUT_DIR = os.path.join(cfg.DATASET_PATH, "task3", "images")
+TASK4_IMG_OUTPUT_DIR = os.path.join(cfg.DATASET_PATH, "task4", "images")
 
 
 def parse_tile_labels(label_path):
+    """Read a tile's normalised YOLO labels; an absent file means no labels."""
     labels = []
     if not os.path.exists(label_path):
         return labels
-    with open(label_path, "r") as f:
-        for line in f.readlines():
-            parts = line.strip().split()
+
+    with open(label_path, "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.split()
             if len(parts) < 5:
                 continue
-            labels.append(
-                [
-                    int(parts[0]),
-                    float(parts[1]),
-                    float(parts[2]),
-                    float(parts[3]),
-                    float(parts[4]),
-                ]
-            )
+            labels.append([int(parts[0])] + [float(v) for v in parts[1:5]])
+
     return labels
 
 
-os.makedirs(task3_img_output_dir, exist_ok=True)
-os.makedirs(task4_img_output_dir, exist_ok=True)
+def main():
+    os.makedirs(TASK3_IMG_OUTPUT_DIR, exist_ok=True)
+    os.makedirs(TASK4_IMG_OUTPUT_DIR, exist_ok=True)
 
-all_tile_images = sorted(
-    [f for f in os.listdir(source_images_dir) if f.endswith(".jpg")]
-)
-
-print(f"Now, processing {len(all_tile_images)} images and labels...")
-
-for image_filename in all_tile_images:
-
-    image_path = os.path.join(source_images_dir, image_filename)
-    label_path = os.path.join(source_labels_dir, image_filename.replace(".jpg", ".txt"))
-
-    tile_image = cv2.imread(image_path)
-
-    if tile_image is None:
-        continue
-
-    labels = parse_tile_labels(label_path)  # returns [] if label file missing
-
-    print(
-        f"Labels:",
-        labels,
+    all_tile_images = sorted(
+        f for f in os.listdir(SOURCE_IMAGES_DIR) if f.endswith(".jpg")
     )
+    print(f"Processing {len(all_tile_images)} training tiles...")
 
-    task3_image = blank_tile_regions(
-        tile_image.copy(), labels, cfg.TILE_SIZE, "blank_unlabeled"
-    )
-    task4_image = blank_tile_regions(
-        tile_image.copy(), labels, cfg.TILE_SIZE, "blank_labeled"
-    )
+    written = skipped = 0
 
-    cv2.imwrite(os.path.join(task3_img_output_dir, image_filename), task3_image)
-    cv2.imwrite(os.path.join(task4_img_output_dir, image_filename), task4_image)
+    for image_filename in all_tile_images:
+        tile_image = cv2.imread(os.path.join(SOURCE_IMAGES_DIR, image_filename))
+        if tile_image is None:
+            skipped += 1
+            continue
 
-num_saved_task3_tiles = len(os.listdir(task3_img_output_dir))
-num_saved_task4_tiles = len(os.listdir(task4_img_output_dir))
+        labels = parse_tile_labels(
+            os.path.join(SOURCE_LABELS_DIR, image_filename.replace(".jpg", ".txt"))
+        )
 
-print(
-    f"\nNo. of saved task 3 tiles: {num_saved_task3_tiles,}No. of saved task 4 tiles: {num_saved_task4_tiles}"
-)
-print(
-    f"Task 3 tiles saved to: {task3_img_output_dir} \nTask 4 tiles saved to: {task4_img_output_dir}"
-)
+        cv2.imwrite(
+            os.path.join(TASK3_IMG_OUTPUT_DIR, image_filename),
+            blank_tile_regions(tile_image, labels, cfg.TILE_SIZE, "blank_unlabeled"),
+        )
+        cv2.imwrite(
+            os.path.join(TASK4_IMG_OUTPUT_DIR, image_filename),
+            blank_tile_regions(tile_image, labels, cfg.TILE_SIZE, "blank_labeled"),
+        )
+        written += 1
+
+    print(f"\nWrote {written} tiles to each of task3/ and task4/")
+    if skipped:
+        print(f"Skipped {skipped} unreadable tiles")
+    print(f"Task 3 tiles: {TASK3_IMG_OUTPUT_DIR}")
+    print(f"Task 4 tiles: {TASK4_IMG_OUTPUT_DIR}")
+
+
+if __name__ == "__main__":
+    main()

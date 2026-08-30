@@ -1,12 +1,15 @@
-# results_detiler.py
+"""Map tile-level YOLO predictions back onto full-page coordinates.
+
+Tile predictions are de-normalised, offset by their tile's origin on the padded
+page, filtered out of the padded margin, and de-duplicated across tile seams
+with non-maximum suppression.
+"""
 
 import os, cv2
 import numpy as np
 import scribal_char_spotting.config as cfg
 from scribal_char_spotting.tiling import pad_image, get_tile_coords
-
-
-TILE_LABEL_DIR = cfg.TILE_LABEL_PATH
+from scribal_char_spotting.config import log
 
 
 def parse_tile_prediction_labels(results_label_path):
@@ -132,6 +135,7 @@ def untile_predictions(
     output_dir,
     tile_size,
     overlap,
+    iou_threshold=cfg.IOU_THRESHOLD,
 ):
 
     os.makedirs(output_dir, exist_ok=True)
@@ -144,6 +148,22 @@ def untile_predictions(
     #  Build mapping from image_number
 
     page_groups = {}
+
+    # Ultralytics names prediction files after the position of each image in
+    # the list passed to predict(), which the notebook builds with sorted(glob).
+    # sorted_tile_paths reproduces that ordering, so index i identifies tile i.
+    # Confirm the count matches before relying on it: a silent mismatch would
+    # attach every detection to the wrong tile origin without raising.
+    n_predictions = len(
+        [f for f in os.listdir(test_yolo_labels_dir) if f.endswith(".txt")]
+    )
+    if n_predictions and n_predictions != len(sorted_tile_paths):
+        raise ValueError(
+            f"{len(sorted_tile_paths)} tiles listed in {test_txt_path} but "
+            f"{n_predictions} prediction files in {test_yolo_labels_dir}. "
+            "Predictions are matched to tiles by position, so the counts must "
+            "agree or every detection lands on the wrong tile."
+        )
 
     for i, tile_path in enumerate(sorted_tile_paths):
 
@@ -159,7 +179,7 @@ def untile_predictions(
 
         page_groups[image_number].append([tile_index, prediction_path])
 
-    print(f"Found {len(page_groups)} unique pages for detiling")
+    log(f"Found {len(page_groups)} unique pages for detiling")
 
     # For each page, reconstruct coords, collect detections, NMS, save
 
@@ -208,7 +228,7 @@ def untile_predictions(
             )  # change count base from 1 to 0 (start at index 0)
 
             if coord_index >= len(tile_coords) or coord_index < 0:
-                print(f"coord_index {coord_index} out of range")
+                log(f"coord_index {coord_index} out of range")
                 continue
 
             tile_origin = tile_coords[coord_index]
@@ -222,20 +242,26 @@ def untile_predictions(
                 tile_preds, tile_origin, tile_size
             )
 
-            # Filter detections that fall in the padding zone
-            page_preds = [det for det in page_preds if det[1] < page_width]
+            # Drop detections that landed in the padded margin. Padding is
+            # added to the right and bottom, so both axes must be checked;
+            # testing x alone let bottom-margin detections through.
+            page_preds = [
+                det
+                for det in page_preds
+                if det[1] < page_width and det[2] < page_height
+            ]
 
             all_page_detections.extend(page_preds)
 
-        print(f"Detections before NMS: {len(all_page_detections)}")
+        log(f"Detections before NMS: {len(all_page_detections)}")
 
         # Apply NMS to remove cross-tile duplicates
 
         final_detections = apply_nms_to_page_detections(
-            all_page_detections, iou_threshold=0.45
+            all_page_detections, iou_threshold=iou_threshold
         )
 
-        print(f"Detections after NMS: {len(final_detections)}")
+        log(f"Detections after NMS: {len(final_detections)}")
 
         # Normalize back to page-level YOLO format and save
 
@@ -257,13 +283,17 @@ def untile_predictions(
                 w_norm = w_px / page_width
                 h_norm = h_px / page_height
 
-                f.write(f"{class_id} {xc_norm} {yc_norm} {w_norm} {h_norm}\n")
+                # Keep confidence: it survives NMS and lets downstream
+                # consumers threshold without re-running inference.
+                f.write(
+                    f"{class_id} {xc_norm} {yc_norm} {w_norm} {h_norm} {conf}\n"
+                )
 
         pages_processed += 1
         total_detections += len(final_detections)
 
     print("=" * 50)
-    print(f"Detiling complete")
+    print("Detiling complete")
     print(f"Pages processed : {pages_processed}")
     print(f"Pages skipped   : {pages_skipped}")
     print(f"Total detections: {total_detections}")

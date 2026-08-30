@@ -1,161 +1,137 @@
-import cv2, os, random, json
-import matplotlib.pyplot as plt
+"""Draw ground-truth or predicted boxes over tiles and full pages.
+
+Verification only: if the boxes sit on the characters the coordinate pipeline is
+correct, and if they are offset or the wrong size there is a conversion bug.
+
+The class-id -> letter map is loaded lazily, so importing this module (and
+therefore the package) does not require the letter dictionary to be present.
+"""
+
+import json
+import os
+import random
+
+import cv2
+import matplotlib
+
+matplotlib.use("Agg")  # headless: these functions save files, they do not display
 import matplotlib.patches as patches
-from PIL import Image
+import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+
 import scribal_char_spotting.config as cfg
 
-
-"""
-Pick 5 random tiles, run this, and look at the output images
-If boxes align with actual characters, then pipeline is correct
-If boxes are offset or the wrong size, there is a coordinate bug to find
-"""
-
-with open(cfg.TXTS_PATH + "/letter_dictionary.txt", "r") as f:
-    letter_dict = json.load(f)
-
-reverse_dict = {}
-for key, value in letter_dict.items():
-    reverse_dict[value] = key
+_REVERSE_DICT = None
 
 
-def draw_boxes_on_tile(tile_image, tile_annotation_file, letter_dictionary=None):
+def _class_names():
+    """Load and cache the class-id -> letter mapping, or {} if unavailable."""
+    global _REVERSE_DICT
+    if _REVERSE_DICT is None:
+        try:
+            with open(cfg.LETTER_DICTIONARY_PATH, "r", encoding="utf-8") as f:
+                letter_dict = json.load(f)
+            _REVERSE_DICT = {v: k for k, v in letter_dict.items()}
+        except (OSError, json.JSONDecodeError):
+            _REVERSE_DICT = {}
+    return _REVERSE_DICT
 
-    # Read the image with cv2
+
+def _label_for(class_id):
+    """Human-readable name for a class id, falling back to the id itself."""
+    name = _class_names().get(class_id)
+    return name if name else str(class_id)
+
+
+def _read_boxes(annotation_path):
+    """Yield (class_id, xc, yc, w, h) from a YOLO label or prediction file."""
+    with open(annotation_path, "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.split()
+            if len(parts) < 5:
+                continue
+            yield int(parts[0]), *(float(v) for v in parts[1:5])
+
+
+def draw_boxes_on_tile(tile_image, tile_annotation_file, output_path=None):
+    """
+    Draw boxes on a single tile.
+
+    Args:
+        tile_image: path to the tile .jpg
+        tile_annotation_file: path to its YOLO .txt
+        output_path: where to write the annotated tile. If None, the image is
+            returned without being written, so this works headless.
+
+    Returns:
+        The annotated image array.
+    """
     image = cv2.imread(tile_image)
     if image is None:
         raise ValueError(f"Failed to load image: {tile_image}")
+
     tile_height, tile_width = image.shape[:2]
 
-    # Open and read the annotation file lines
-    with open(tile_annotation_file, "r") as f:
-        lines = f.readlines()
-        print(lines)
+    for class_id, xc_norm, yc_norm, w_norm, h_norm in _read_boxes(
+        tile_annotation_file
+    ):
+        xc_px, yc_px = xc_norm * tile_width, yc_norm * tile_height
+        w_px, h_px = w_norm * tile_width, h_norm * tile_height
 
-    for line in lines:
+        x0, y0 = int(xc_px - w_px / 2), int(yc_px - h_px / 2)
+        x1, y1 = int(xc_px + w_px / 2), int(yc_px + h_px / 2)
 
-        # Split the line into parts and unpack: class_id, xc, yc, w, h
-        parts = line.strip().split()
-        print(parts)
-        class_id = int(parts[0])
-        xc_norm, yc_norm, w_norm, h_norm = map(float, parts[1:])
-        print(f"Parts: {class_id, xc_norm, yc_norm, w_norm, h_norm}\n")
-
-        # Denormalize to pixels
-        xc_px = xc_norm * tile_width
-        yc_px = yc_norm * tile_height
-        w_px = w_norm * tile_width
-        h_px = h_norm * tile_height
-
-        # Convert center format to corner format (cast to int for cv2)
-        x0 = int(xc_px - w_px / 2)
-        y0 = int(yc_px - h_px / 2)
-        x1 = int(xc_px + w_px / 2)
-        y1 = int(yc_px + h_px / 2)
-
-        # Draw rectangle on image: cv2.rectangle(image, top-left, bottom-right, color, thickness)
-        cv2.rectangle(
+        cv2.rectangle(image, (x0 - 5, y0 - 5), (x1 + 5, y1 + 5), (0, 255, 0), 2)
+        cv2.putText(
             image,
-            (x0 - 5, y0 - 5),
-            (x1 + 5, y1 + 5),
-            (random.random(), 255, 0),
+            _label_for(class_id),
+            (x0, y0 - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 0, 255),
             2,
         )
 
-        # Look up the class letter and put text on the image
-        if letter_dictionary is not None:
+    if output_path:
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        cv2.imwrite(output_path, image)
 
-            letter_dict = reverse_dict.get(class_id, str(class_id))
-            print(letter_dict)
-            cv2.putText(
-                image,
-                str(letter_dict),
-                (x0, y0 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-                2,
-            )
-
-    # Display the boxes on top of the tiles
-    cv2.imshow("Tile Verification", image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    return image
 
 
-# Code for printing the boxes on individual tiles
-""" with open(cfg.TXTS_PATH + "/letter_dictionary.txt", "r") as f:
-    letter_dict = json.load(f)
-
-all_tile_images = sorted(
-    [f for f in os.listdir(cfg.TILE_STORAGE_PATH) if f.endswith(".jpg")]
-)
-sample_tiles = random.sample(all_tile_images, 5)
-
-for tile_filename in sample_tiles:
-    tile_image_path = os.path.join(cfg.TILE_STORAGE_PATH, tile_filename)
-    tile_label_path = os.path.join(
-        cfg.TILE_LABEL_PATH, tile_filename.replace(".jpg", ".txt")
-    )
-
-    if not os.path.exists(tile_label_path):
-        print(f"No label found for {tile_filename}, skipping")
-        continue
-
-    print(f"Showing: {tile_filename}")
-    draw_boxes_on_tile(tile_image_path, tile_label_path, letter_dict) """
-
-
-def draw_boxes_on_page(image_path, annotation_path, output_path):
+def draw_boxes_on_page(image_path, annotation_path, output_path, dpi=600):
     """
-    Draw bounding boxes on a page image from annotation file. Save to output path.
-    Uses matplotlib for high-quality visualization suitable for full pages (like in provided sample code).
-    """
-    image = Image.open(image_path)
-    image = np.array(image)
-    image_height, image_width = image.shape[0], image.shape[1]
+    Draw boxes on a full page and save the figure.
 
-    with open(annotation_path, "r") as f:
-        lines = f.readlines()
+    Matplotlib rather than cv2 because a page carries thousands of hairline
+    boxes and needs vector-quality output to stay legible when zoomed.
+    """
+    image = np.array(Image.open(image_path))
+    image_height, image_width = image.shape[:2]
 
     fig, ax = plt.subplots()
     ax.imshow(image, cmap="gray")
     ax.set_aspect("equal")
 
-    for line in lines:
-        parts = line.strip().split()
-
-        if len(parts) < 5:
-            continue
-
-        class_id = int(parts[0])
-        xc_norm = float(parts[1])
-        yc_norm = float(parts[2])
-        w_norm = float(parts[3])
-        h_norm = float(parts[4])
-
-        # Denormalize the bounding box coordinates from normalized to pixels
+    for class_id, xc_norm, yc_norm, w_norm, h_norm in _read_boxes(annotation_path):
         box_x = (xc_norm - w_norm / 2) * image_width
         box_y = (yc_norm - h_norm / 2) * image_height
-        box_w = w_norm * image_width
-        box_h = h_norm * image_height
 
-        rect = patches.Rectangle(
-            (box_x, box_y),
-            box_w,
-            box_h,
-            linewidth=0.2,
-            edgecolor=(random.random(), random.random(), random.random()),
-            facecolor="none",
+        ax.add_patch(
+            patches.Rectangle(
+                (box_x, box_y),
+                w_norm * image_width,
+                h_norm * image_height,
+                linewidth=0.2,
+                edgecolor=(random.random(), random.random(), random.random()),
+                facecolor="none",
+            )
         )
-        ax.add_patch(rect)
-
-        letter = reverse_dict.get(class_id, str(class_id))
         ax.text(
             box_x,
             box_y,
-            letter,
+            _label_for(class_id),
             color="black",
             ha="center",
             va="center",
@@ -164,6 +140,8 @@ def draw_boxes_on_page(image_path, annotation_path, output_path):
         )
 
     ax.axis("off")
-    fig.savefig(output_path, bbox_inches="tight", pad_inches=0, dpi=1200)
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    fig.savefig(output_path, bbox_inches="tight", pad_inches=0, dpi=dpi)
     plt.close(fig)
+
     print(f"Saved: {output_path}")

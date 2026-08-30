@@ -1,8 +1,16 @@
-# build_class_dictionary(), parse_pseudo_yolo_labels()
+"""Build the class dictionary from COCO categories and parse pseudo-YOLO labels.
 
-# IMPORT CONFIG.PY DATA PROPERLY! - DID IT
-import scribal_char_spotting.config as cfg
+The source annotations are "pseudo-YOLO": whitespace-separated
+`<class name> <x0> <y0> <w> <h>` where the coordinates are **pixels, not
+normalised**, and anchored at the **upper-left corner**, not the centre.
+Both conversions happen downstream in `label_tiler`.
+"""
+
 import json
+import os
+
+import scribal_char_spotting.config as cfg
+from scribal_char_spotting.config import log
 
 TXTS_PATH = cfg.TXTS_PATH
 COCO_PATH = cfg.COCO_PATH
@@ -11,83 +19,83 @@ PSEUDO_YOLO_PATH = cfg.PSEUDO_YOLO_PATH
 
 def build_class_dictionary(json_path, dict_name):
     """
-    Builds a dictionary mapping character names to class IDs from a COCO JSON file.
+    Build a name -> class-id mapping from a COCO JSON file and write it to disk.
+
+    COCO category ids are 1-indexed; YOLO class ids are 0-indexed, so each id is
+    shifted down by one.
 
     Args:
         json_path: Path to the COCO format JSON file
-        dict_name: Output dictionary file name
+        dict_name: Output file stem, written to TXTS_PATH as <dict_name>.txt
 
     Returns:
-        Dictionary mapping letter strings to YOLO class IDs (0-indexed)
+        dict: the mapping that was written.
     """
-
-    letter_strings = []
-    class_ids = []
-
-    letter_dictionary = {}
-
-    with open(json_path, "r") as file:
+    with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
-        for category_key in data["categories"]:
-            letter_strings.append(category_key["name"])
-            class_ids.append(category_key["id"] - 1)
+    letter_dictionary = {}
+    for category in data["categories"]:
+        # Reversing key and value gives the shape the YOLO yaml expects.
+        letter_dictionary[category["name"]] = category["id"] - 1
 
-        # print(len(class_ids), len(letter_strings))
-
-        for var in range(len(class_ids)):
-            # Reversing placement of key and value creates the type easily associated with YOLO-yaml file
-            letter_dictionary[letter_strings[var]] = class_ids[var]
-
-    # Now, write letter_dictionary as txt to C:\Users\addod\scribal-glyph-character-spotting\txts
-
-    with open(f"{TXTS_PATH}/{dict_name}.txt", "w") as f:
-        # passing an indent parameter makes the json pretty-printed
+    os.makedirs(TXTS_PATH, exist_ok=True)
+    output_path = os.path.join(TXTS_PATH, f"{dict_name}.txt")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(letter_dictionary, f, indent=2)
 
-    # This loads the dict
-    with open(f"{TXTS_PATH}/letter_dictionary.txt", "r") as f:
-        letter_dict = json.load(f)
+    log(f"Wrote {len(letter_dictionary)} classes to {output_path}")
 
-    print(letter_dict)
+    return letter_dictionary
 
 
 def parse_pseudo_yolo_labels(label_path, class_dict):
     """
-    Takes an image's pseudo YOLO data and letter dictionary
+    Read one page's pseudo-YOLO annotations into [class_id, x0, y0, w, h] rows.
 
-    Parses and stores the pseudo YOLO Label data as an array
+    Class names may contain spaces (for example the ligature class), so the five
+    fields are taken from the *end* of the line and everything before them is
+    rejoined as the name. Splitting on single spaces would truncate such a name
+    to its first word and fail the dictionary lookup.
+
+    Args:
+        label_path: path to the page's pseudo-YOLO .txt
+        class_dict: path to the JSON name -> id mapping, or the mapping itself
+
+    Returns:
+        list of [class_id, x0, y0, w, h], coordinates in page pixels.
     """
+    if isinstance(class_dict, (str, os.PathLike)):
+        with open(class_dict, "r", encoding="utf-8") as file:
+            class_dict = json.load(file)
 
     all_character_array = []
 
-    # Load the letter dictionary for assigning each letter as its officially assigned class_id
-    with open(class_dict, "r") as file:
-        class_dict = json.load(file)
-
-    with open(label_path, "r") as annotation_file:
+    with open(label_path, "r", encoding="utf-8") as annotation_file:
         characters = annotation_file.readlines()
-    for character in characters:
-        character_array = []
-        data = character.split(" ")
-        for i in range(5):
-            if i == 0:
-                letter = data[i]
-                class_id = class_dict[letter]  # look up the letter in your dictionary
-                character_array.append(class_id)
 
-            else:
-                character_array.append(float(data[i]))
-        all_character_array.append(character_array)
-    print(all_character_array)
+    for line_number, character in enumerate(characters, start=1):
+        parts = character.split()
+        if not parts:
+            continue
+        if len(parts) < 5:
+            raise ValueError(
+                f"{label_path}:{line_number} has {len(parts)} fields, expected "
+                f"at least 5 (<class name> x0 y0 w h): {character.strip()!r}"
+            )
+
+        # The last four fields are the box; everything before is the class name.
+        letter = " ".join(parts[:-4])
+        box = parts[-4:]
+
+        if letter not in class_dict:
+            raise KeyError(
+                f"{label_path}:{line_number} names class {letter!r}, which is "
+                f"not in the class dictionary ({len(class_dict)} entries)."
+            )
+
+        all_character_array.append([class_dict[letter]] + [float(v) for v in box])
+
+    log(f"{label_path}: parsed {len(all_character_array)} labels")
 
     return all_character_array
-
-
-letter_dictionary_file = f"{TXTS_PATH}/letter_dictionary.txt"
-
-
-# parse_pseudo_yolo_labels(PSEUDO_YOLO_PATH, letter_dictionary_file)
-
-
-# build_class_dictionary(COCO_PATH, "letter_dict_yaml")

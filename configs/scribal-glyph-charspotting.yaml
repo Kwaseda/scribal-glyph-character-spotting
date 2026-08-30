@@ -1,9 +1,13 @@
 # scribal-glyph-charspotting.yaml
-# Scribal Glyph Character Spotting Project
+# Scribal Glyph Character Spotting
 # YOLOv8m by Ultralytics, AGPL-3.0 license
 # 512x512 image tiles
-# classes: Scribal Glyph Characters (54 classes)
-# Original dataset from: https://lme.tf.fau.de/competitions/icdar-2025-competition-on-glyph-detection-in-15th-century-european-printed-documents/
+#
+# 54 classes declared because the COCO category list carries 54 entries.
+# Only 31 of them occur anywhere in the tiled data and 29 have instances in the
+# evaluation splits, so 23 output heads never see a training example.
+#
+# Original dataset: https://lme.tf.fau.de/competitions/icdar-2025-competition-on-glyph-detection-in-15th-century-european-printed-documents/
 # Example usage: yolo train data=scribal-glyph-charspotting.yaml
 
 names:
@@ -33,7 +37,7 @@ names:
   23: 'r'
   24: 'x'
   25: 'j'
-  26: 'zz_ligature with dachf/u00f6rmiges a'
+  26: 'zz_ligature with dachförmiges a'
   27: 'z'
   28: 'S'
   29: 'N'
@@ -43,7 +47,7 @@ names:
   33: 'E'
   34: 'O'
   35: 'A'
-  36: ''
+  36: 'unnamed_class_36'
   37: 'J'
   38: 'Q'
   39: 'R'
@@ -62,8 +66,12 @@ names:
   52: 'zz'
   53: '$'  
   
-# path: '/content/drive/MyDrive/dataset'
-path: '/content/drive/MyDrive/dataset_task3'
+# Absolute path to the dataset root, as mounted during training on Colab.
+# Task 2 (baseline, unmodified tiles) is the default.
+# For the task 3 ablation, point this at the dataset whose train/ images have
+# had everything outside the labelled boxes blanked:
+#   path: '/content/drive/MyDrive/dataset_task3'
+path: '/content/drive/MyDrive/dataset'
 
 train: train.txt
 val: val.txt

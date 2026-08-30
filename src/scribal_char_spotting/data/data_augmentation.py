@@ -1,86 +1,95 @@
+"""Build the modified training tiles used by tasks 3 and 4.
+
+Two manipulations, both filling with the tile's own mean border colour so the
+replacement blends with the parchment rather than introducing a hard edge:
+
+    blank_unlabeled  keep only the annotated character boxes  (task 3)
+    blank_labeled    erase the annotated character boxes      (task 4)
+"""
+
 import numpy as np
-import os, cv2
-import scribal_char_spotting.config as cfg
 
-# TEST_IMAGE_PATH = os.path.join(cfg.IMAGE_PATH, "WdB_027-0002.jpg")
-# TEST_LABEL_PATH = os.path.join(cfg.PSEUDO_YOLO_PATH, "WdB_027-0002.txt")
+from scribal_char_spotting.config import log
 
-# test_image = cv2.imread(TEST_IMAGE_PATH)
-
-test_labels = []
+VALID_MODES = ("blank_labeled", "blank_unlabeled")
 
 
-def compute_average_background_color(image):
+def compute_average_background_color(image, border=10):
+    """
+    Mean BGR colour of the image's border pixels, used as the fill colour.
 
-    border = 10
+    Args:
+        image: BGR image array
+        border: width in pixels of the strip sampled from each edge
 
-    # Strip pixels from all four edges:
-    top = image[0:border, :]
-    bottom = image[-border:, :]
-    left = image[:, 0:border]
-    right = image[:, -border:]
+    Returns:
+        tuple of three ints, the per-channel mean.
+    """
+    if image.ndim != 3:
+        raise ValueError(f"expected a 3-channel image, got shape {image.shape}")
 
-    top_pixels = top.reshape(-1, 3)  # shape: (10 * image_width, 3)
-    bottom_pixels = bottom.reshape(-1, 3)
-    left_pixels = left.reshape(-1, 3)
-    right_pixels = right.reshape(-1, 3)
+    height, width = image.shape[:2]
+    border = max(1, min(border, height, width))
 
-    # Stack into one flat array
-    # shape: (total_border_pixels, 3)
-    all_border_pixels = np.vstack(
-        [top_pixels, bottom_pixels, left_pixels, right_pixels]
-    )
+    strips = [
+        image[0:border, :],
+        image[-border:, :],
+        image[:, 0:border],
+        image[:, -border:],
+    ]
+    all_border_pixels = np.vstack([s.reshape(-1, image.shape[2]) for s in strips])
 
-    # Calculate mean of pixels per channel (B, G, R) and convert to int
     mean_bgr = np.mean(all_border_pixels, axis=0)
-    print(mean_bgr)
+    tuple_bgr = tuple(int(v) for v in mean_bgr)
 
-    tuple_bgr = tuple(mean_bgr.astype(int))
-
-    print(tuple_bgr)
+    log(f"mean border colour: {tuple_bgr}")
 
     return tuple_bgr
 
 
-# avg_bg_color = compute_average_background_color(test_image)
-
-
 def blank_tile_regions(image, labels, tile_size, mode):
+    """
+    Blank either the labelled boxes or everything except them.
+
+    Args:
+        image: BGR tile array
+        labels: [class_id, xc_norm, yc_norm, w_norm, h_norm] rows for this tile
+        tile_size: pixel size of the tile (square)
+        mode: "blank_labeled" or "blank_unlabeled"
+
+    Returns:
+        A new array; the input is not modified.
+    """
+    if mode not in VALID_MODES:
+        raise ValueError(f"mode must be one of {VALID_MODES}, got {mode!r}")
 
     fill_color = compute_average_background_color(image)
     result = image.copy()
 
     if mode == "blank_unlabeled":
-        result[:] = fill_color  # hide all letters by filling them all with bg color
+        # Fill everything, then paste the labelled boxes back from the original.
+        result[:] = fill_color
 
     for label in labels:
-
-        print(label)
-        class_id, xc_norm, yc_norm, w_norm, h_norm = label
+        _class_id, xc_norm, yc_norm, w_norm, h_norm = label
 
         x1 = int((xc_norm - w_norm / 2) * tile_size)
         y1 = int((yc_norm - h_norm / 2) * tile_size)
         x2 = int((xc_norm + w_norm / 2) * tile_size)
         y2 = int((yc_norm + h_norm / 2) * tile_size)
 
-        # Clamp all values to [0, tile_size]
-        x1_clamped = np.clip(x1, 0, tile_size)
-        y1_clamped = np.clip(y1, 0, tile_size)
-        x2_clamped = np.clip(x2, 0, tile_size)
-        y2_clamped = np.clip(y2, 0, tile_size)
+        x1 = int(np.clip(x1, 0, tile_size))
+        y1 = int(np.clip(y1, 0, tile_size))
+        x2 = int(np.clip(x2, 0, tile_size))
+        y2 = int(np.clip(y2, 0, tile_size))
+
+        if x2 <= x1 or y2 <= y1:
+            # Box clipped away entirely; nothing to blank or restore.
+            continue
 
         if mode == "blank_labeled":
-            result[y1_clamped:y2_clamped, x1_clamped:x2_clamped] = (
-                fill_color  # hide characters
-            )
-
-        elif mode == "blank_unlabeled":
-            # Mask entire image with fill_color first,
-            # then restore result[y1:y2, x1:x2] = image[y1:y2, x1:x2],
-            # keeping only labeled regions and blanking everything else
-
-            result[y1_clamped:y2_clamped, x1_clamped:x2_clamped] = image[
-                y1_clamped:y2_clamped, x1_clamped:x2_clamped
-            ]
+            result[y1:y2, x1:x2] = fill_color
+        else:
+            result[y1:y2, x1:x2] = image[y1:y2, x1:x2]
 
     return result
