@@ -149,10 +149,7 @@ def untile_predictions(
 
     page_groups = {}
 
-    # Ultralytics names prediction files after the position of each image in
-    # the list passed to predict(), which the notebook builds with sorted(glob).
-    # sorted_tile_paths reproduces that ordering, so index i identifies tile i.
-    # Confirm the count matches before relying on it: a silent mismatch would
+    # Confirm the count matches before relying on it. Silent mismatches would
     # attach every detection to the wrong tile origin without raising.
     n_predictions = len(
         [f for f in os.listdir(test_yolo_labels_dir) if f.endswith(".txt")]
@@ -172,7 +169,16 @@ def untile_predictions(
         image_number = int(parts[1])
         tile_index = int(parts[2])
 
-        prediction_path = os.path.join(test_yolo_labels_dir, f"image{i}.txt")
+        # Ultralytics 8.4.155 names prediction files after the source tile
+        # (image_10_11.txt); older versions named them by position in the list
+        # passed to predict() (image0.txt). Prefer the filename match, because
+        # it carries no ordering assumption, and fall back to the positional
+        # name so runs made under the older convention still de-tile.
+        prediction_path = os.path.join(
+            test_yolo_labels_dir, tile_filename.replace(".jpg", ".txt")
+        )
+        if not os.path.exists(prediction_path):
+            prediction_path = os.path.join(test_yolo_labels_dir, f"image{i}.txt")
 
         if image_number not in page_groups:
             page_groups[image_number] = []
