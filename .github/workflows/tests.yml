@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Only what the tests import. The headless OpenCV build needs no display libraries.
+      - name: Install test dependencies
+        run: pip install numpy opencv-python-headless Pillow matplotlib pytest
+
+      - name: Run tests
+        run: python -m pytest
+        env:
+          PYTHONPATH: src
